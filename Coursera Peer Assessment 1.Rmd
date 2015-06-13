@@ -1,0 +1,169 @@
+---
+title: "R PeerAssessment1"
+author: "Liu Yanxiong"
+date: "Saturday, June 13, 2015"
+output: pdf_document
+---
+
+##**Introduction** 
+  
+  It is now possible to collect a large amount of data about personal movement using activity monitoring devices such as a Fitbit, Nike Fuelband, or Jawbone Up. These type of devices are part of the “quantified self” movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. But these data remain under-utilized both because the raw data are hard to obtain and there is a lack of statistical methods and software for processing and interpreting the data.
+
+This assignment makes use of data from a personal activity monitoring device. This device collects data at 5 minute intervals through out the day. The data consists of two months of data from an anonymous individual collected during the months of October and November, 2012 and include the number of steps taken in 5 minute intervals each day.  
+  
+##**Data**
+
+  
+  The data for this assignment can be downloaded from the course web site:
+
+Dataset: Activity monitoring data [52K]
+The variables included in this dataset are:
+
+steps: Number of steps taking in a 5-minute interval (missing values are coded as NA)
+
+date: The date on which the measurement was taken in YYYY-MM-DD format
+
+interval: Identifier for the 5-minute interval in which measurement was taken
+
+The dataset is stored in a comma-separated-value (CSV) file and there are a total of 17,568 observations in this dataset.  
+
+##**Processing Data**
+
+
+```{r}
+dataset<-read.csv("C:/Users/USER/Assignment/activity.csv") #Read the Data
+dataset$date<-as.POSIXct(dataset$date) #Set the date format
+```
+
+##**What is mean total number of steps taken per day?**
+  
+  For this part of the assignment, you can ignore the missing values in the dataset.  
+  
+  1. Make a histogram of the total number of steps taken each day
+```{r}
+#Summing up the number of steps per day
+dailysteps<-aggregate(dataset$steps,by=list(dataset$date),sum,na.rm=TRUE)
+names(dailysteps)<-c("Day","NoOfSteps")
+```
+```{r, echo=TRUE}
+#Plotting the histogram
+barplot(dailysteps$NoOfSteps,xlab="Days",main="Daily Steps")
+```
+  
+  
+  2. Calculate and report the **mean** and **median** total number of steps taken per day
+```{r}
+#Calculate the mean and median
+meanofsteps<-mean(dailysteps$NoOfSteps)
+medianofsteps<-median(dailysteps$NoOfSteps)
+#Print Mean:
+print(meanofsteps)
+#Print Median:
+print(medianofsteps)
+```
+##**What is the average daily activity pattern?**
+  
+  1. Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+```{r}
+#Calculating the mean steps
+IntervalSteps<-aggregate(dataset$steps,by=list(dataset$interval),mean,na.rm=TRUE)
+names(IntervalSteps)<-c("TimeLine","Steps")
+```
+```{r, echo=TRUE}
+#Plotting the Graph
+plot(IntervalSteps,type="l",main="Interval Steps")
+```
+  
+  
+  2. Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+```{r}
+#Calculating the maximum steps
+MaximumSteps<-IntervalSteps$Steps[IntervalSteps$Steps==max(IntervalSteps$Steps)]
+#Pring the maximum Steps:
+print(MaximumSteps)
+```
+##**Imputing missing values**
+  
+  Note that there are a number of days/intervals where there are missing values (coded as NA). The presence of missing days may introduce bias into some calculations or summaries of the data.
+  
+  1. Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
+```{r}
+   NASteps <- subset(dataset, is.na(dataset$steps))
+   NoNAs <-length(NASteps$steps)
+   #Print No. of Missing values
+   print(NoNAs)
+```
+  
+  2. Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
+
+  3. Create a new dataset that is equal to the original dataset but with the missing data filled in.
+
+  4. Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
+```{r}
+#replace the NAs with the median number of steps for that period
+MedianSteps<-aggregate(dataset$steps,by=list(dataset$interval),median,na.rm=TRUE)
+IntervalSteps<-cbind(IntervalSteps[],MedianSteps$x)
+NewStps <- data.frame(date=dataset$date[is.na(dataset$steps)], interval = dataset$interval[is.na(dataset$steps)], steps=IntervalSteps[match(IntervalSteps$TimeLine, dataset$interval[is.na(dataset$steps)]),3])
+# remove the NA's 
+dataset <- subset(dataset, !is.na(steps))
+
+# Adding Data
+dataset <- rbind(dataset, NewStps)
+
+#Plotting
+dailysteps<-aggregate(dataset$steps,by=list(dataset$date),sum,na.rm=TRUE)
+names(dailysteps)<-c("Day","NoOfSteps")
+``` 
+```{r, echo=TRUE}
+#Plotting the histogram
+barplot(dailysteps$NoOfSteps,xlab="Days",main="Daily Steps")
+```{r}
+#Calculate the mean and median
+meanofsteps<-mean(dailysteps$NoOfSteps)
+medianofsteps<-median(dailysteps$NoOfSteps)
+#Print Mean:
+print(meanofsteps)
+#Print Median:
+print(medianofsteps)
+```
+  
+  
+##**Are there differences in activity patterns between weekdays and weekends?**
+For this part the weekdays() function may be of some help here. Use the dataset with the filled-in missing values for this part.
+
+1. Create a new factor variable in the dataset with two levels – “weekday” and “weekend” indicating whether a given date is a weekday or weekend day.
+
+2. Make a panel plot containing a time series plot (i.e. type = “l”) of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis).
+```{r}
+# convert date from string to Date class
+# convert date from string to Date class
+df<-read.csv("C:/Users/USER/Assignment/activity.csv") 
+df$date <- as.Date(df$date, "%Y-%m-%d")
+
+# add a new column indicating day of the week 
+df$day <- weekdays(df$date)
+
+# add a new column called day type and initialize to weekday
+df$day_type <- c("weekday")
+
+# If day is Saturday or Sunday, make day_type as weekend
+for (i in 1:nrow(df)){
+  if (df$day[i] == "星期六" || df$day[i] == "星期日"){
+    df$day_type[i] <- "weekend"
+  }
+}
+
+# convert day_time from character to factor
+df$day_type <- as.factor(df$day_type)
+
+# aggregate steps as interval to get average number of steps in an interval across all days
+table_interval_steps_imputed <- aggregate(steps ~ interval+day_type, df, mean)
+
+# make the panel plot for weekdays and weekends
+library(ggplot2)
+```
+```{r,echo=TRUE}
+qplot(interval, steps, data=table_interval_steps_imputed, geom=c("line"), xlab="Interval", 
+      ylab="Number of steps", main="") + facet_wrap(~ day_type, ncol=1)
+```
+    
